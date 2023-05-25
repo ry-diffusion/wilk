@@ -2,8 +2,6 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-// TODO: Drop and use stdio?
-#include <sys/stat.h>
 #include <time.h>
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -13,29 +11,28 @@ void glfwError(int id, const char *description) {
 }
 
 const char *readFile(const char *path) {
-  struct stat st;
+  unsigned int size;
   char *buffer;
   FILE *fp;
 
-  if (stat(path, &st) < 0) {
-    return NULL;
-  }
-
   fp = fopen(path, "r");
+  fseek(fp, 0L, SEEK_END);
+  size = ftell(fp);
+  fseek(fp, 0L, SEEK_SET);
 
   if (!fp) {
     return NULL;
   }
 
-  buffer = (char *)malloc(st.st_size + 1 * sizeof(char));
-  fread(buffer, sizeof(char), st.st_size, fp);
-  buffer[st.st_size] = '\0';
+  buffer = (char *)malloc(size + 1 * sizeof(char));
+  fread(buffer, sizeof(char), size, fp);
+  buffer[size] = '\0';
 
   fclose(fp);
   return buffer;
 }
 
-char checkGLLinkError(GLuint idx) {
+char checkLinkError(GLuint idx) {
   char log[1024];
   GLint ok;
 
@@ -50,7 +47,7 @@ char checkGLLinkError(GLuint idx) {
   return 1;
 }
 
-char checkGLShaderCompileError(GLuint idx) {
+char checkShaderCompileError(GLuint idx) {
   char log[1024];
   GLint compiled;
 
@@ -197,7 +194,7 @@ int main(void) {
   glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
   glCompileShader(vertexShader);
 
-  if (!checkGLShaderCompileError(vertexShader)) {
+  if (!checkShaderCompileError(vertexShader)) {
     return 1;
   }
 
@@ -207,7 +204,7 @@ int main(void) {
   glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
   glCompileShader(fragmentShader);
 
-  if (!checkGLShaderCompileError(fragmentShader)) {
+  if (!checkShaderCompileError(fragmentShader)) {
     return 1;
   }
 
@@ -219,7 +216,7 @@ int main(void) {
   glAttachShader(program, fragmentShader);
   glLinkProgram(program);
 
-  if (!checkGLLinkError(program)) {
+  if (!checkLinkError(program)) {
     return 1;
   }
 
