@@ -20,7 +20,6 @@ void main() {
   dvec2 c = dvec2((gl_FragCoord.x - limits.x / 2) * 4.0 / limits.x + loc.x,
                 (gl_FragCoord.y - limits.y / 2) * 4.0 / limits.y + loc.y);
   
-  
   dvec2 z = c;
   int it = 0;
   

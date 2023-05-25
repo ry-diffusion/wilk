@@ -143,7 +143,9 @@ int main(void) {
   const char *vertexShaderSource, *fragmentShaderSource;
 
   if (!glfwInit()) {
-    glfwTerminate();
+    const char *description;
+    glfwGetError(&description);
+    fprintf(stderr, "Unable to initialize GLFW: %s\n", description);
     return 1;
   }
 
@@ -152,12 +154,11 @@ int main(void) {
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
   glfwSetErrorCallback(glfwError);
 
-  fragmentShaderSource = readFile("src/shader/wilk.frag");
-  vertexShaderSource = readFile("src/shader/wilk.vert");
   window = glfwCreateWindow(800, 600, "Wilk", NULL, NULL);
   tick = time(NULL);
 
   if (!window) {
+    fputs("Unable to create window!", stderr);
     glfwTerminate();
     return 1;
   }
@@ -166,7 +167,14 @@ int main(void) {
   gladLoadGL(glfwGetProcAddress);
   glfwSetFramebufferSizeCallback(window, setFramebufferSize);
 
-  puts("[Info] Creating buffers");
+  puts("[Info] Initializing");
+  vertexShader = glCreateShader(GL_VERTEX_SHADER);
+  fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+  program = glCreateProgram();
+  fragmentShaderSource = readFile("src/shader/wilk.frag");
+  vertexShaderSource = readFile("src/shader/wilk.vert");
+
+  puts(" [Debug] Creating buffers");
   glGenBuffers(1, &vbo);
   glGenBuffers(1, &ebo);
   glGenVertexArrays(1, &vao);
@@ -190,35 +198,29 @@ int main(void) {
                GL_STATIC_DRAW);
 
   puts("[Info] Compiling shaders");
-  vertexShader = glCreateShader(GL_VERTEX_SHADER);
   glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
   glCompileShader(vertexShader);
 
-  if (!checkShaderCompileError(vertexShader)) {
-    return 1;
-  }
+  if (!checkShaderCompileError(vertexShader))
+    goto error;
 
   puts(" [Debug] Compiled vertex shader");
 
-  fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
   glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
   glCompileShader(fragmentShader);
 
-  if (!checkShaderCompileError(fragmentShader)) {
-    return 1;
-  }
+  if (!checkShaderCompileError(fragmentShader))
+    goto error;
 
   puts(" [Debug] Compiled fragment shader");
 
   puts("[Info] Attaching shaders");
-  program = glCreateProgram();
   glAttachShader(program, vertexShader);
   glAttachShader(program, fragmentShader);
   glLinkProgram(program);
 
-  if (!checkLinkError(program)) {
-    return 1;
-  }
+  if (!checkLinkError(program))
+    goto error;
 
   glDeleteShader(vertexShader);
   glDeleteShader(fragmentShader);
@@ -264,7 +266,17 @@ int main(void) {
   }
 
   glDeleteProgram(program);
-
+  glDeleteBuffers(1, &vertexShader);
+  glDeleteBuffers(1, &fragmentShader);
   glfwTerminate();
   return 0;
+
+error:
+  glDeleteProgram(program);
+  glDeleteShader(vertexShader);
+  glDeleteShader(fragmentShader);
+  glDeleteBuffers(1, &vertexShader);
+  glDeleteBuffers(1, &fragmentShader);
+  glfwTerminate();
+  return -1;
 }
