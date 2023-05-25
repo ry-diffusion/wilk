@@ -1,7 +1,8 @@
-#include "glad/gl.h"
+#include <glad/gl.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+// TODO: Drop and use stdio?
 #include <sys/stat.h>
 #include <time.h>
 #define GLFW_INCLUDE_NONE
@@ -34,7 +35,7 @@ const char *readFile(const char *path) {
   return buffer;
 }
 
-int checkGLLinkError(GLuint idx) {
+char checkGLLinkError(GLuint idx) {
   char log[1024];
   GLint ok;
 
@@ -49,7 +50,7 @@ int checkGLLinkError(GLuint idx) {
   return 1;
 }
 
-int checkGLShaderCompileError(GLuint idx) {
+char checkGLShaderCompileError(GLuint idx) {
   char log[1024];
   GLint compiled;
 
@@ -88,35 +89,46 @@ double x = 0.0, y = 0.0;
 double maxInterations = 100.0;
 
 const double megaScale = 5080.0f;
-const double TAU = M_PI * 2.0;
+const double speed = 0.10;
 
-void processInput(GLFWwindow *window, float fixup) {
-  if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+void onKeyPress(GLFWwindow *window, int key, int scancode, int action,
+                int mods) {
+  (void)scancode;
+  (void)mods;
+  (void)window;
+
+  if (action != GLFW_PRESS)
+    return;
+
+  switch (key) {
+  case GLFW_KEY_ESCAPE:
     glfwSetWindowShouldClose(window, GL_TRUE);
-
-  if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-    scale += megaScale * fixup;
-
-  if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-    scale -= megaScale * fixup;
-
-  if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+    break;
+  case GLFW_KEY_UP:
+    y += speed / scale;
+    break;
+  case GLFW_KEY_DOWN:
+    y -= speed / scale;
+    break;
+  case GLFW_KEY_LEFT:
+    x -= speed / scale;
+    break;
+  case GLFW_KEY_RIGHT:
+    x += speed / scale;
+    break;
+  case GLFW_KEY_I:
+    scale += megaScale;
+    break;
+  case GLFW_KEY_O:
+    scale -= megaScale;
+    break;
+  case GLFW_KEY_J:
     maxInterations -= 1.0;
-
-  if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+    break;
+  case GLFW_KEY_K:
     maxInterations += 1.0;
-
-  if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-    y += fixup * 8.8 / scale;
-
-  if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-    y -= fixup * 8.8 / scale;
-
-  if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-    x -= fixup * 8.8 / scale;
-
-  if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-    x += fixup * 8.8 / scale;
+    break;
+  }
 }
 
 void onScroll(GLFWwindow *window, double xoffset, double yoffset) {
@@ -131,7 +143,6 @@ int main(void) {
       fps, avg;
   char buffer[256];
   time_t tick;
-  double lastFrame, currentFrame, deltaFrame;
   const char *vertexShaderSource, *fragmentShaderSource;
 
   if (!glfwInit()) {
@@ -214,6 +225,8 @@ int main(void) {
     return 1;
   }
 
+  glDeleteShader(vertexShader);
+  glDeleteShader(fragmentShader);
   free((void *)vertexShaderSource);
   free((void *)fragmentShaderSource);
 
@@ -222,16 +235,9 @@ int main(void) {
 
   glfwSwapInterval(0);
   glfwSetScrollCallback(window, onScroll);
+  glfwSetKeyCallback(window, onKeyPress);
 
   while (!glfwWindowShouldClose(window)) {
-    currentFrame = glfwGetTime();
-    deltaFrame = currentFrame - lastFrame;
-    lastFrame = currentFrame;
-
-    if (deltaFrame > TAU)
-      deltaFrame -= TAU;
-
-    processInput(window, deltaFrame);
 
     if (time(NULL) > tick) {
       fps = avg;
@@ -263,8 +269,7 @@ int main(void) {
     avg++;
   }
 
-  glDeleteShader(vertexShader);
-  glDeleteShader(fragmentShader);
+  glDeleteProgram(program);
 
   glfwTerminate();
   return 0;
