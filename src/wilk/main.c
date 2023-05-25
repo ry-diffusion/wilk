@@ -41,11 +41,8 @@ int checkGLLinkError(GLuint idx) {
   glGetProgramiv(idx, GL_LINK_STATUS, &ok);
 
   if (!ok) {
-
     glGetProgramInfoLog(idx, 1024, NULL, log);
-
     printf("Shader link failed with error: %s\n", log);
-
     return 0;
   }
 
@@ -86,44 +83,71 @@ unsigned int indices[] = {
     1, 2, 3  // second triangle
 };
 
-float scale = 1.0f;
-float x = 0.0;
-float y = 0.0;
-float kk = 0.10;
-const int TAU = M_PI * 2.0;
+double scale = 1.0f;
+double x = 0.0, y = 0.0;
+double maxInterations = 100.0;
+
+const double megaScale = 5080.0f;
+const double TAU = M_PI * 2.0;
+
 void processInput(GLFWwindow *window, float fixup) {
   if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
     glfwSetWindowShouldClose(window, GL_TRUE);
 
-  if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-    scale += 128.0 * fixup;
+  if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+    scale += megaScale * fixup;
+
+  if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+    scale -= megaScale * fixup;
+
   if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-    scale -= 0.40;
+    maxInterations -= 1.0;
+
+  if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+    maxInterations += 1.0;
+
   if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
     y += fixup * 8.8 / scale;
+
   if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
     y -= fixup * 8.8 / scale;
+
   if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
     x -= fixup * 8.8 / scale;
+
   if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
     x += fixup * 8.8 / scale;
 }
 
-#define MAX_ITER 2048.0f
+void onScroll(GLFWwindow *window, double xoffset, double yoffset) {
+  (void)window;
+  (void)xoffset;
+  scale += yoffset;
+}
+
 int main(void) {
-  glfwInit();
+  GLFWwindow *window;
+  GLuint vbo, ebo, vao, vertexShader, fragmentShader, program, width, height,
+      fps, avg;
+  char buffer[256];
+  time_t tick;
+  double lastFrame, currentFrame, deltaFrame;
+  const char *vertexShaderSource, *fragmentShaderSource;
+
+  if (!glfwInit()) {
+    glfwTerminate();
+    return 1;
+  }
+
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
   glfwSetErrorCallback(glfwError);
 
-  GLFWwindow *window = glfwCreateWindow(800, 600, "Wilk", NULL, NULL);
-  GLuint vbo, ebo, vao, vertexShader, fragmentShader, program, width, height,
-      fps, avg;
-  time_t tick = time(NULL);
-  double lastFrame, currentFrame, deltaFrame;
-  const char *vertexShaderSource = readFile("src/shader/wilk.vert");
-  const char *fragmentShaderSource = readFile("src/shader/wilk.frag");
+  fragmentShaderSource = readFile("src/shader/wilk.frag");
+  vertexShaderSource = readFile("src/shader/wilk.vert");
+  window = glfwCreateWindow(800, 600, "Wilk (Waiting for frame)", NULL, NULL);
+  tick = time(NULL);
 
   if (!window) {
     glfwTerminate();
@@ -134,7 +158,7 @@ int main(void) {
   gladLoadGL(glfwGetProcAddress);
   glfwSetFramebufferSizeCallback(window, setFramebufferSize);
 
-  puts("buffers and arrays, are you?");
+  puts("[Info] Creating buffers");
   glGenBuffers(1, &vbo);
   glGenBuffers(1, &ebo);
   glGenVertexArrays(1, &vao);
@@ -159,7 +183,7 @@ int main(void) {
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
                GL_STATIC_DRAW);
 
-  puts("Building shaders");
+  puts("[Info] Compiling shaders");
   vertexShader = glCreateShader(GL_VERTEX_SHADER);
   glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
   glCompileShader(vertexShader);
@@ -167,6 +191,8 @@ int main(void) {
   if (!checkGLShaderCompileError(vertexShader)) {
     return 1;
   }
+
+  puts(" [Debug] Compiled vertex shader");
 
   fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
   glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
@@ -176,7 +202,9 @@ int main(void) {
     return 1;
   }
 
-  puts("Programming shaders!");
+  puts(" [Debug] Compiled fragment shader");
+
+  puts("[Info] Attaching shaders");
   program = glCreateProgram();
   glAttachShader(program, vertexShader);
   glAttachShader(program, fragmentShader);
@@ -189,17 +217,22 @@ int main(void) {
   free((void *)vertexShaderSource);
   free((void *)fragmentShaderSource);
 
-  glfwSwapInterval(0);
-  while (!glfwWindowShouldClose(window)) {
+  printf("[Info] Renderer: %s (%s)\n", glGetString(GL_RENDERER),
+         glGetString(GL_VENDOR));
 
+  glfwSwapInterval(0);
+  glfwSetScrollCallback(window, onScroll);
+
+  while (!glfwWindowShouldClose(window)) {
     currentFrame = glfwGetTime();
     deltaFrame = currentFrame - lastFrame;
     lastFrame = currentFrame;
+
     if (deltaFrame > TAU)
       deltaFrame -= TAU;
 
     processInput(window, deltaFrame);
-    char buffer[256];
+
     if (time(NULL) > tick) {
       fps = avg;
       avg = 0;
@@ -209,19 +242,16 @@ int main(void) {
       tick = time(NULL);
     }
 
-    sprintf(buffer, "Wilk (%d FPS, [%.2f, %.2f] xy, %.2f%% scale)", fps, x, y,
-            scale);
-
-    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
+    sprintf(buffer, "Wilk (%d FPS, [%.2f, %.2f] xy, %.2f%% scale, %.2f mit)",
+            fps, x, y, scale * 100, maxInterations);
 
     glUseProgram(program);
     glfwGetWindowSize(window, (int *)&width, (int *)&height);
 
-    glUniform2f(glGetUniformLocation(program, "limits"), width, height);
-    glUniform2f(glGetUniformLocation(program, "loc"), x, y);
-    glUniform1f(glGetUniformLocation(program, "scale"), scale);
-    glUniform1f(glGetUniformLocation(program, "maxIterations"), MAX_ITER);
+    glUniform2d(glGetUniformLocation(program, "limits"), width, height);
+    glUniform2d(glGetUniformLocation(program, "loc"), x, y);
+    glUniform1d(glGetUniformLocation(program, "scale"), scale);
+    glUniform1d(glGetUniformLocation(program, "maxIterations"), maxInterations);
 
     glBindVertexArray(vao);
 
