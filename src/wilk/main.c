@@ -141,7 +141,7 @@ int main(void) {
   GLFWwindow *window;
   GLuint vbo, ebo, vao, vertexShader, fragmentShader, program, width, height,
       fps, avg;
-  char buffer[256];
+  char title[256];
   time_t tick;
   const char *vertexShaderSource, *fragmentShaderSource;
 
@@ -243,13 +243,12 @@ int main(void) {
       fps = avg;
       avg = 0;
 
-      glfwSetWindowTitle(window, buffer);
+      sprintf(title, "Wilk (%d FPS, [%.2f, %.2f] xy, %.2f%% scale, %.2f mit)",
+              fps, x, y, scale * 100, maxInterations);
+      glfwSetWindowTitle(window, title);
 
       tick = time(NULL);
     }
-
-    sprintf(buffer, "Wilk (%d FPS, [%.2f, %.2f] xy, %.2f%% scale, %.2f mit)",
-            fps, x, y, scale * 100, maxInterations);
 
     glUseProgram(program);
     glfwGetWindowSize(window, (int *)&width, (int *)&height);
