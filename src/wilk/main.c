@@ -157,7 +157,7 @@ int main(void) {
 
   fragmentShaderSource = readFile("src/shader/wilk.frag");
   vertexShaderSource = readFile("src/shader/wilk.vert");
-  window = glfwCreateWindow(800, 600, "Wilk (Waiting for frame)", NULL, NULL);
+  window = glfwCreateWindow(800, 600, "Wilk", NULL, NULL);
   tick = time(NULL);
 
   if (!window) {
