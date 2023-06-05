@@ -16,13 +16,12 @@ const char *readFile(const char *path) {
   FILE *fp;
 
   fp = fopen(path, "r");
+  if (!fp)
+    return NULL;
+
   fseek(fp, 0L, SEEK_END);
   size = ftell(fp);
   fseek(fp, 0L, SEEK_SET);
-
-  if (!fp) {
-    return NULL;
-  }
 
   buffer = (char *)malloc(size + 1 * sizeof(char));
   fread(buffer, sizeof(char), size, fp);
@@ -137,10 +136,10 @@ void onScroll(GLFWwindow *window, double xoffset, double yoffset) {
 int main(void) {
   GLFWwindow *window;
   GLuint vbo, ebo, vao, vertexShader, fragmentShader, program, width, height,
-      fps, avg;
-  char title[256];
-  time_t tick;
+      fps = 0, avg = 0;
   const char *vertexShaderSource, *fragmentShaderSource;
+  char title[256] = {0};
+  time_t tick;
 
   if (!glfwInit()) {
     const char *description;
@@ -240,7 +239,7 @@ int main(void) {
       fps = avg;
       avg = 0;
 
-      sprintf(title, "Wilk (%d FPS, [%.2f, %.2f] xy, %.2f%% scale, %.2f mit)",
+      sprintf(title, "Wilk (%u FPS, [%.2f, %.2f] xy, %.2f%% scale, %.2f mit)",
               fps, x, y, scale * 100, maxInterations);
       glfwSetWindowTitle(window, title);
 

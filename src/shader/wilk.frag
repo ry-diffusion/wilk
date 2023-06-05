@@ -1,4 +1,5 @@
 #version 400 core
+/* Stupid simple shader for mandelbrot. */
 
 uniform double scale;
 uniform double maxIterations;
@@ -7,7 +8,6 @@ uniform dvec2 limits;
 
 layout (location = 0) out vec4 fragColor;
 
-
 dvec2 complexSquared(dvec2 z) {
   return dvec2(
     z.x * z.x - z.y * z.y,
@@ -15,11 +15,11 @@ dvec2 complexSquared(dvec2 z) {
   );
 }
 
-void main() {
+void main() {  
   dvec2 limits = limits*scale;
   dvec2 c = dvec2((gl_FragCoord.x - limits.x / 2) * 4.0 / limits.x + loc.x,
-                (gl_FragCoord.y - limits.y / 2) * 4.0 / limits.y + loc.y);
-  
+                  (gl_FragCoord.y - limits.y / 2) * 4.0 / limits.y + loc.y);
+
   dvec2 z = c;
   int it = 0;
   
@@ -30,6 +30,5 @@ void main() {
     it++;
   }
 
-  
-  fragColor = vec4(it / maxIterations, 0.0, 0.0, 1.0);
+  fragColor = vec4(it / maxIterations, 0.0, it / maxIterations, 1.0);
 }
